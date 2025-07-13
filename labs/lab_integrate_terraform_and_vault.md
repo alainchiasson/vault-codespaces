@@ -1,7 +1,7 @@
 # Hands-on Lab: Integrating HashiCorp Vault with Terraform
 
 ## Overview
-In this lab, you will learn how to integrate HashiCorp Vault with Terraform using proper authentication and authorization. You will create a new Key-Value secrets engine, write secrets to it, create a dedicated policy and token for Terraform, and then use Terraform to access and output these secrets.
+In this lab, you will learn how to integrate HashiCorp Vault with Terraform using proper authentication and authorization. You will create a new Key-Value secrets engine, write secrets to it, create a dedicated policy and token for Terraform, and then use Terraform to access and output these secrets using the ephmeral resource type. The use of the ephemeral resource type allows you to leverage secrets from vault, but they will not be persisted in the state file like other variables.
 
 **Time Required:** ~45 minutes
 
@@ -128,7 +128,7 @@ terraform {
   required_providers {
     vault = {
       source  = "hashicorp/vault"
-      version = "~> 4.5.0"
+      version = "~> 5.0"
     }
   }
 }
@@ -143,13 +143,13 @@ provider "vault" {
 3. Create a new file named `main.tf`:
 ```hcl
 # Read database secrets from Vault
-data "vault_kv_secret_v2" "database_creds" {
+ephemeral "vault_kv_secret_v2" "database_creds" {
   mount = "kv"
   name  = "database/config"
 }
 
 # Read API Keys from Vault
-data "vault_kv_secret_v2" "api_keys" {
+ephemeral "vault_kv_secret_v2" "api_keys" {
   mount = "kv"
   name  = "api/keys"
 }
@@ -162,28 +162,6 @@ resource "null_resource" "example" {
 }
 ```
 
-4. Create a new file named `outputs.tf`:
-```hcl
-output "database_username" {
-  value     = data.vault_kv_secret_v2.database_creds.data["username"]
-  sensitive = true
-}
-
-output "database_password" {
-  value     = data.vault_kv_secret_v2.database_creds.data["password"]
-  sensitive = true
-}
-
-output "dev_api_key" {
-  value     = data.vault_kv_secret_v2.api_keys.data["development"]
-  sensitive = true
-}
-
-output "prod_api_key" {
-  value     = data.vault_kv_secret_v2.api_keys.data["production"]
-  sensitive = true
-}
-```
 
 ### Step 6: Initialize and Apply Terraform Configuration
 
@@ -203,23 +181,11 @@ terraform init
 terraform plan
 ```
 
-4. Apply the Terraform configuration and confirm by typing `yes` (notice the secrets are marked as sensitive):
+4. Apply the Terraform configuration and confirm by typing `yes` when prompted:
 ```bash
 terraform apply
 ```
 
-5. View the outputs defined in the `outputs.tf` ((notice the secrets are marked as sensitive)):
-```bash
-terraform output
-```
-
-Note: The outputs will be shown as sensitive values. To see the actual values, you can use:
-```bash
-terraform output database_username
-terraform output database_password
-terraform output dev_api_key
-terraform output prod_api_key
-```
 
 ### 🎉 Congrats, you've successfully integrated HashiCorp Terraform and Vault. Terraform was able to obtain secrets from Vault to use within the Terraform configuration.
 
